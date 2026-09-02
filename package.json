@@ -1,0 +1,19 @@
+{
+  "name": "ghost-upload-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MCP-Server fuer Datei-Uploads zu Ghost (Bilder, Dateien, Medien)",
+  "type": "module",
+  "main": "index.js",
+  "bin": {
+    "ghost-upload-mcp": "index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@tryghost/admin-api": "^1.14.11",
+    "zod": "^3.25.76"
+  }
+}
