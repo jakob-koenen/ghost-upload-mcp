@@ -40,7 +40,7 @@ Eintrag in `~/Library/Application Support/Claude/claude_desktop_config.json`:
 ```json
 "ghost-upload": {
   "command": "node",
-  "args": ["/Users/jakobkoenen/ghost-upload-mcp/index.js"],
+  "args": ["/Users/jakobkoenen/Desktop/projects/ghost-upload-mcp/index.js"],
   "env": {
     "GHOST_API_URL": "https://aufrecht.digital",
     "GHOST_ADMIN_API_KEY": "…",
