@@ -23,11 +23,18 @@ if (!GHOST_ADMIN_API_KEY) {
   process.exit(1);
 }
 
-const api = new GhostAdminAPI({
-  url: GHOST_API_URL,
-  key: GHOST_ADMIN_API_KEY,
-  version: GHOST_API_VERSION,
-});
+// A malformed key or URL throws here; report it in one readable line instead of a stack trace.
+let api;
+try {
+  api = new GhostAdminAPI({
+    url: GHOST_API_URL,
+    key: GHOST_ADMIN_API_KEY,
+    version: GHOST_API_VERSION,
+  });
+} catch (error) {
+  console.error(`Ghost configuration rejected: ${error.message}`);
+  process.exit(1);
+}
 
 // MCP carries no binary data, so every upload is addressed by a path on this machine.
 function resolveLocalFile(input, label) {

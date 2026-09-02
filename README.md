@@ -43,27 +43,19 @@ Das gilt für jede MCP-Lösung, nicht nur für diese.
 Arbeitsverzeichnis des Serverprozesses, das der Client vorgibt — absolute Pfade
 oder `~/…` sind deshalb die verlässliche Form.
 
-## Installation
-
-Node 18 oder neuer.
-
-```bash
-git clone <repo-url> ghost-upload-mcp
-cd ghost-upload-mcp
-npm install
-```
-
-Der Server wird nicht von Hand gestartet, sondern über stdio vom MCP-Client.
-
 ## Konfiguration
 
-Dieselben drei Umgebungsvariablen wie `ghost-mcp`, damit ein Konfigurationsblock
-für beide Server genügt:
+Der Server muss nicht installiert werden. `npx` holt ihn direkt von GitHub, wie
+`ghost-mcp` sich per `npx -y` aus der npm-Registry holt — ein Eintrag in der
+Client-Konfiguration genügt.
+
+Nötig sind drei Umgebungsvariablen, dieselben wie bei `ghost-mcp`, sodass ein
+Konfigurationsblock für beide Server passt:
 
 | Variable | | |
 |---|---|---|
 | `GHOST_API_URL` | Pflicht | Basis-URL der Ghost-Instanz, ohne Pfad |
-| `GHOST_ADMIN_API_KEY` | Pflicht | Admin-API-Key aus einer Custom Integration (`id:secret`) |
+| `GHOST_ADMIN_API_KEY` | Pflicht | Admin-API-Key im Format `{24 Hex}:{64 Hex}` |
 | `GHOST_API_VERSION` | optional | Standard `v5.0` |
 
 Den Key liefert Ghost unter **Settings → Integrations → Add custom integration**.
@@ -76,8 +68,8 @@ In `~/Library/Application Support/Claude/claude_desktop_config.json` unter
 
 ```json
 "ghost-upload": {
-  "command": "node",
-  "args": ["/pfad/zu/ghost-upload-mcp/index.js"],
+  "command": "npx",
+  "args": ["-y", "github:jakob-koenen/ghost-upload-mcp"],
   "env": {
     "GHOST_API_URL": "https://example.com",
     "GHOST_ADMIN_API_KEY": "…",
@@ -94,13 +86,43 @@ Danach Claude Desktop neu starten.
 claude mcp add ghost-upload \
   --env GHOST_API_URL=https://example.com \
   --env GHOST_ADMIN_API_KEY=… \
-  -- node /pfad/zu/ghost-upload-mcp/index.js
+  -- npx -y github:jakob-koenen/ghost-upload-mcp
 ```
+
+### Version festnageln
+
+`github:jakob-koenen/ghost-upload-mcp` folgt dem Standard-Branch. Ein Tag oder
+Commit hinter `#` bindet stattdessen einen festen Stand:
+
+```
+github:jakob-koenen/ghost-upload-mcp#v1.0.0
+```
+
+### Lokal statt über GitHub
+
+Für Entwicklung am Server selbst:
+
+```bash
+git clone https://github.com/jakob-koenen/ghost-upload-mcp.git
+cd ghost-upload-mcp
+npm install
+```
+
+Der Config-Eintrag zeigt dann auf die Datei statt auf GitHub:
+
+```json
+"command": "node",
+"args": ["/pfad/zu/ghost-upload-mcp/index.js"]
+```
+
+Voraussetzung in beiden Fällen: Node 18 oder neuer. Gestartet wird der Server
+nicht von Hand, sondern über stdio vom MCP-Client.
 
 ## Fehlerverhalten
 
-Fehlt eine Pflichtvariable, bricht der Server beim Start mit einer Meldung auf
-stderr ab. Zur Laufzeit werden zwei Fälle sauber zurückgemeldet, statt den
+Beim Start bricht der Server mit einer einzeiligen Meldung auf stderr ab, wenn
+eine Pflichtvariable fehlt oder der Key nicht dem Format `{24 Hex}:{64 Hex}`
+entspricht. Zur Laufzeit werden zwei Fälle sauber zurückgemeldet, statt den
 Server zu beenden:
 
 - Pfadprobleme vor dem Upload — Datei nicht gefunden, Verzeichnis statt Datei
