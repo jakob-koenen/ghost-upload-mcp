@@ -1,48 +1,85 @@
 # ghost-upload-mcp
 
-MCP-Server für Datei-Uploads zu Ghost. Ergänzt `ghost-mcp` (MFYDev/ghost-mcp),
-das alles außer Uploads kann, und bleibt bewusst auf drei Tools beschränkt.
+MCP-Server für Datei-Uploads zu Ghost: Bilder, Dateien und Medien landen mit
+einem Tool-Aufruf in der Ghost-Instanz, zurück kommt die öffentliche URL.
+
+Gedacht als Ergänzung zu [MFYDev/ghost-mcp](https://github.com/MFYDev/ghost-mcp),
+das Posts, Tags, Members und vieles mehr abdeckt — aber keine Uploads kennt.
+Beide Server laufen parallel und teilen sich dieselben Umgebungsvariablen.
+
+## Warum ein zweiter Server statt eines Forks
+
+`ghost-mcp` bringt `@tryghost/admin-api` bereits als Abhängigkeit mit, und diese
+Bibliothek kann Uploads vollständig. Es fehlt allein die MCP-Tool-Hülle. Als
+eigener Server bleibt `ghost-mcp` unangetastet und aktualisiert sich über
+`npx -y` weiter von selbst; ein Fork müsste bei jedem Upstream-Release
+nachgezogen werden.
 
 ## Tools
 
-| Tool | Parameter | Rückgabe |
+| Tool | Parameter | Zweck |
 |---|---|---|
-| `ghost_upload_image` | `file`, `purpose` (`image` \| `profile_image` \| `icon`), `ref` | CDN-URL |
-| `ghost_upload_file` | `file`, `ref` | öffentliche URL |
-| `ghost_upload_media` | `file`, `thumbnail` | öffentliche URL |
+| `ghost_upload_image` | `file`, `purpose` (`image` \| `profile_image` \| `icon`), `ref` | Aufmacherbilder, Bilder im Fließtext, Avatare, Favicon |
+| `ghost_upload_file` | `file`, `ref` | beliebige Dateien, etwa PDFs als Download im Beitrag |
+| `ghost_upload_media` | `file`, `thumbnail` | Video- und Audiodateien, optional mit Vorschaubild |
 
-Die zurückgegebene URL wandert anschließend in `posts_add` — als `feature_image`
-oder als `<img src>` im HTML.
+Jedes Tool antwortet mit der öffentlichen URL — und mit `ref`, falls gesetzt.
+Diese URL wandert anschließend in den Beitrag: als `feature_image` oder als
+`<img src>` im HTML.
 
 ## Dateipfade
 
-MCP transportiert keine Binärdaten. Jeder Upload bekommt deshalb einen Pfad auf
-diesem Mac, nie die Datei selbst: `~/Downloads/atrium-aufmacher.jpg`. Ein Bild
-ins Chatfenster zu ziehen funktioniert nicht als Upload-Quelle.
+MCP transportiert keine Binärdaten. Jeder Upload bekommt deshalb **einen Pfad
+auf dem Rechner, auf dem der Server läuft** — nie die Datei selbst:
 
-`~` wird aufgelöst, relative Pfade werden gegen das Arbeitsverzeichnis des
-Servers aufgelöst — absolute Pfade oder `~/…` sind deshalb die verlässliche Form.
+```
+~/Downloads/aufmacher.jpg
+```
+
+Ein Bild ins Chatfenster zu ziehen funktioniert damit nicht als Upload-Quelle.
+Das gilt für jede MCP-Lösung, nicht nur für diese.
+
+`~` wird aufgelöst, ebenso `file://`-URLs. Relative Pfade beziehen sich auf das
+Arbeitsverzeichnis des Serverprozesses, das der Client vorgibt — absolute Pfade
+oder `~/…` sind deshalb die verlässliche Form.
+
+## Installation
+
+Node 18 oder neuer.
+
+```bash
+git clone <repo-url> ghost-upload-mcp
+cd ghost-upload-mcp
+npm install
+```
+
+Der Server wird nicht von Hand gestartet, sondern über stdio vom MCP-Client.
 
 ## Konfiguration
 
-Dieselben Umgebungsvariablen wie `ghost-mcp`, damit ein Config-Block für beide
-Server reicht:
+Dieselben drei Umgebungsvariablen wie `ghost-mcp`, damit ein Konfigurationsblock
+für beide Server genügt:
 
-- `GHOST_API_URL` (Pflicht)
-- `GHOST_ADMIN_API_KEY` (Pflicht)
-- `GHOST_API_VERSION` (optional, Standard `v5.0`)
+| Variable | | |
+|---|---|---|
+| `GHOST_API_URL` | Pflicht | Basis-URL der Ghost-Instanz, ohne Pfad |
+| `GHOST_ADMIN_API_KEY` | Pflicht | Admin-API-Key aus einer Custom Integration (`id:secret`) |
+| `GHOST_API_VERSION` | optional | Standard `v5.0` |
 
-Der Admin-API-Key steht nicht im Repo, sondern kommt aus `env` in
-`claude_desktop_config.json`.
+Den Key liefert Ghost unter **Settings → Integrations → Add custom integration**.
+Er gehört in die Client-Konfiguration, nicht ins Repo.
 
-Eintrag in `~/Library/Application Support/Claude/claude_desktop_config.json`:
+### Claude Desktop
+
+In `~/Library/Application Support/Claude/claude_desktop_config.json` unter
+`mcpServers`:
 
 ```json
 "ghost-upload": {
   "command": "node",
-  "args": ["/Users/jakobkoenen/Desktop/projects/ghost-upload-mcp/index.js"],
+  "args": ["/pfad/zu/ghost-upload-mcp/index.js"],
   "env": {
-    "GHOST_API_URL": "https://aufrecht.digital",
+    "GHOST_API_URL": "https://example.com",
     "GHOST_ADMIN_API_KEY": "…",
     "GHOST_API_VERSION": "v5.0"
   }
@@ -51,10 +88,25 @@ Eintrag in `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 Danach Claude Desktop neu starten.
 
-## Installation
+### Claude Code
 
 ```bash
-npm install
+claude mcp add ghost-upload \
+  --env GHOST_API_URL=https://example.com \
+  --env GHOST_ADMIN_API_KEY=… \
+  -- node /pfad/zu/ghost-upload-mcp/index.js
 ```
 
-Der Server läuft per stdio und wird von Claude Desktop gestartet, nicht von Hand.
+## Fehlerverhalten
+
+Fehlt eine Pflichtvariable, bricht der Server beim Start mit einer Meldung auf
+stderr ab. Zur Laufzeit werden zwei Fälle sauber zurückgemeldet, statt den
+Server zu beenden:
+
+- Pfadprobleme vor dem Upload — Datei nicht gefunden, Verzeichnis statt Datei
+- Antworten von Ghost — Meldung samt `context` und `help`, etwa bei ungültigem
+  Key oder abgelehntem Dateityp
+
+## Lizenz
+
+MIT
